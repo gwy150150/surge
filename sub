@@ -1,0 +1,26 @@
+let raw = $server.name || ''
+
+// 提取国旗（包括国旗 emoji 或 🏴‍☠️）
+let flagMatch = raw.match(/([\uD83C][\uDDE6-\uDDFF]){2}|🏴‍☠️/)
+let flag = flagMatch ? flagMatch[0] : ''
+
+// 提取国旗后的 国家代码（可选）+ 国家名称（中英文）
+let code = ''
+let countryName = ''
+let codeNameMatch = raw.match(/(?:([\uD83C][\uDDE6-\uDDFF]){2}|🏴‍☠️)[^\w\u4e00-\u9fa5]*([A-Z]{2})?\s*([\u4e00-\u9fa5\w]+)/)
+
+if (codeNameMatch) {
+  code = codeNameMatch[2] || ''      // 可能为空
+  countryName = codeNameMatch[3] || ''
+}
+
+// 提取中间段：CN开头的公司名称
+let chinaMatch = raw.match(/- (CN [^-]+) -/)
+let chinaCompany = chinaMatch ? chinaMatch[1].trim() : ''
+
+// 提取首段：外国公司名称
+let foreignMatch = raw.match(/^([^-]+) -/)
+let foreignCompany = foreignMatch ? foreignMatch[1].trim() : ''
+
+// 拼接输出格式：国旗+国家代码+国家名+CN段+国外公司段
+$server.name = ${flag} ${code ? code + ' ' : ''}${countryName} ${chinaCompany} ${foreignCompany}
