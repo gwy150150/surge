@@ -33,7 +33,7 @@ const ENABLE_PRETRAINED_MODEL = true;
  */
 const GROUP_TYPES_TO_CONVERT = [
     'url-test',
-    //'select',
+    // 'select',
     // 可以根据需要添加更多类型以转换为smart，例如：
     // 'fallback',
     // 'load-balance'
