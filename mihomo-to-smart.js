@@ -27,9 +27,6 @@ const ENABLE_PRETRAINED_MODEL = true;
  * 只有原始 type 属性在此列表中的代理组才会被转换为 'smart' 类型。
  * * 常见类型包括:
  * - 'url-test' (自动选择)
- * - 'select' (手动选择)
- * - 'fallback' (故障转移)
- * - 'load-balance' (负载均衡)
  */
 const GROUP_TYPES_TO_CONVERT = [
     'url-test',
@@ -37,6 +34,9 @@ const GROUP_TYPES_TO_CONVERT = [
     // 可以根据需要添加更多类型以转换为smart，例如：
     // 'fallback',
     // 'load-balance'
+    // - 'select' (手动选择)
+   //  'fallback' (故障转移)
+   //  'load-balance' (负载均衡)
 ];
 
 // ================================
