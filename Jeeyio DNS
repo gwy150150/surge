@@ -1,0 +1,6 @@
+#!name=Jeeyio DNS
+#!desc=Jeeyio DNS
+
+[Host]
+
+*.quzudostigea.kids = server:https://jeeyio.com/api/dns-query
