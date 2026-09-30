@@ -1,17 +1,14 @@
 /**
- * 微博超话自动签到脚本
- * 兼容 Loon / Egern / Quantumult X / Surge
+ * 微博超话自动签到脚本 (兼容 Egern)
  */
 
 const $ = new Env("微博超话签到");
 const cookieKey = "cookie_weibo_superbody";
 const gdidKey = "gdid_weibo_superbody";
 
-// 1. 抓包模式：获取 Cookie 和 GDID
 if (typeof $request !== "undefined") {
   GetCookie();
 } else {
-  // 2. 定时任务模式：执行签到
   CheckIn();
 }
 
@@ -43,7 +40,7 @@ async function CheckIn() {
     } else if (res.msg) {
       failDetails.push(`${item.title}: ${res.msg}`);
     }
-    await $.wait(1000); // 避免请求过快导致封禁
+    await $.wait(1000);
   }
 
   const subTitle = `成功: ${success} / 总数: ${total}`;
@@ -53,7 +50,6 @@ async function CheckIn() {
   $.done();
 }
 
-// 获取关注的超话列表
 function getSuperList(cookie, gdid) {
   return new Promise((resolve) => {
     const url = {
@@ -72,7 +68,6 @@ function getSuperList(cookie, gdid) {
           const res = JSON.parse(data);
           const cards = res.cards || [];
           let superList = [];
-          
           for (let card of cards) {
             if (card.card_group) {
               for (let group of card.card_group) {
@@ -95,7 +90,6 @@ function getSuperList(cookie, gdid) {
   });
 }
 
-// 执行单个超话签到
 function doSign(item, cookie, gdid) {
   return new Promise((resolve) => {
     const url = {
@@ -125,7 +119,6 @@ function doSign(item, cookie, gdid) {
   });
 }
 
-// 抓取凭证逻辑
 function GetCookie() {
   if ($request.headers) {
     const cookie = $request.headers["Cookie"] \vert{}\vert{} $request.headers["cookie"];
@@ -140,7 +133,6 @@ function GetCookie() {
   $.done();
 }
 
-// 兼容 API 封装
 function Env(name) {
   return new (class {
     constructor(name) {
