@@ -1,19 +1,13 @@
 /**
- * 微博超话自动签到脚本 (Egern 终极兼容版)
+ * 微博超话自动签到脚本 (适配 fmz200 cookies.module)
  */
 
-var cookieKey = "cookie_weibo_superbody";
-var gdidKey = "gdid_weibo_superbody";
+var cookieKey = "chavy_cookie_weibo";
 
-if (typeof $request !== "undefined") {
-  GetCookie();
-} else {
-  CheckIn();
-}
+CheckIn();
 
 function CheckIn() {
   var cookie = getData(cookieKey);
-  var gdid = getData(gdidKey);
 
   if (!cookie) {
     showNotification("签到失败", "未找到 Cookie，请先开启重写后打开微博APP获取");
@@ -21,7 +15,7 @@ function CheckIn() {
     return;
   }
 
-  getSuperList(cookie, gdid, function(list) {
+  getSuperList(cookie, function(list) {
     if (!list || list.length === 0) {
       showNotification("签到结束", "未获取到关注的超话列表或 Cookie 已失效");
       $done({});
@@ -43,7 +37,7 @@ function CheckIn() {
       }
 
       var item = list[index];
-      doSign(item, cookie, gdid, function(res) {
+      doSign(item, cookie, function(res) {
         if (res.result === 1) {
           success++;
         } else if (res.msg) {
@@ -58,13 +52,12 @@ function CheckIn() {
   });
 }
 
-function getSuperList(cookie, gdid, callback) {
+function getSuperList(cookie, callback) {
   var url = {
     url: "https://api.weibo.cn/2/page/get_objects?containerid=100803_-_page_my_follow_super",
     headers: {
       "Cookie": cookie,
-      "User-Agent": "Weibo/7160 (iPhone; iOS 16.0; Scale/3.00)",
-      "gdid": gdid || ""
+      "User-Agent": "Weibo/7160 (iPhone; iOS 16.0; Scale/3.00)"
     }
   };
 
@@ -99,13 +92,12 @@ function getSuperList(cookie, gdid, callback) {
   });
 }
 
-function doSign(item, cookie, gdid, callback) {
+function doSign(item, cookie, callback) {
   var url = {
     url: "https://api.weibo.cn/2/page/button?request_url=http%3A%2F%2Fi.huati.weibo.com%2Fmobile%2Fsuper%2Factive_checkin%3Fpageid%3D" + item.id,
     headers: {
       "Cookie": cookie,
-      "User-Agent": "Weibo/7160 (iPhone; iOS 16.0; Scale/3.00)",
-      "gdid": gdid || ""
+      "User-Agent": "Weibo/7160 (iPhone; iOS 16.0; Scale/3.00)"
     }
   };
 
@@ -127,32 +119,10 @@ function doSign(item, cookie, gdid, callback) {
   });
 }
 
-function GetCookie() {
-  if ($request && $request.headers) {
-    var headers = $request.headers;
-    var cookie = headers["Cookie"] || headers["cookie"];
-    var gdid = headers["gdid"] || headers["GDID"];
-
-    if (cookie) {
-      setData(cookie, cookieKey);
-      if (gdid) setData(gdid, gdidKey);
-      showNotification("获取 Cookie 成功 🎉", "已成功保存微博签到凭证");
-    }
-  }
-  $done({});
-}
-
-// Egern 基础原生 API 封装
 function getData(key) {
   if (typeof $persistentStore !== "undefined") return $persistentStore.read(key);
   if (typeof $prefs !== "undefined") return $prefs.value(key);
   return null;
-}
-
-function setData(val, key) {
-  if (typeof $persistentStore !== "undefined") return $persistentStore.write(val, key);
-  if (typeof $prefs !== "undefined") return $prefs.setValue(val, key);
-  return false;
 }
 
 function showNotification(sub, desc) {
