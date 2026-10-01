@@ -1,46 +1,23 @@
 /**
- * 微博超话自动签到脚本 (fmz200 适配调试版)
+ * 微博超话自动签到脚本 - 专配 fmz200 cookies.module
  */
 
 CheckIn();
 
 function CheckIn() {
-  // 包含 fmz200 及各类常见模块可能使用的所有 Cookie Key
-  var possibleKeys = [
-    "fmz200_cookie_weibo",
-    "fmz200_cookie_微博",
-    "cookie_weibo",
-    "cookie_weibo_superbody",
-    "chavy_cookie_weibo",
-    "wb_cookie",
-    "weibo_cookie",
-    "weibo_token",
-    "weiboCookie"
-  ];
-
-  var cookie = "";
-  var hitKey = "";
-
-  for (var i = 0; i < possibleKeys.length; i++) {
-    var k = possibleKeys[i];
-    var val = getData(k);
-    if (val && val.length > 10) {
-      cookie = val;
-      hitKey = k;
-      break;
-    }
-  }
+  // 1. 获取本地存储的 Cookie
+  var cookie = getWeiboCookie();
 
   if (!cookie) {
-    // 如果全部匹配失败，尝试盲读 fmz200 的基础配置
-    showNotification("签到失败", "未匹配到对应的 Cookie Key，请查看应用日志调试");
+    showNotification("签到失败 ❌", "未找到 Cookie！请开启重写后打开微博APP -> 进入超话页面刷新");
     $done({});
     return;
   }
 
+  // 2. 请求超话列表
   getSuperList(cookie, function(list) {
     if (!list || list.length === 0) {
-      showNotification("签到结束", "找到 Key(" + hitKey + ") 但列表为空或已过期");
+      showNotification("签到结束", "未获取到关注的超话列表，可能 Cookie 已失效，请重新刷新微博");
       $done({});
       return;
     }
@@ -50,10 +27,11 @@ function CheckIn() {
     var failDetails = [];
     var index = 0;
 
+    // 3. 逐个签到
     function processNext() {
       if (index >= list.length) {
         var subTitle = "成功: " + success + " / 总数: " + total;
-        var detail = failDetails.length > 0 ? "失败原因:\n" + failDetails.join("\n") : "所有超话已全部签到完成！";
+        var detail = failDetails.length > 0 ? "失败详情:\n" + failDetails.join("\n") : "所有超话已全部签到完成！🎉";
         showNotification(subTitle, detail);
         $done({});
         return;
@@ -67,12 +45,32 @@ function CheckIn() {
           failDetails.push(item.title + ": " + res.msg);
         }
         index++;
-        setTimeout(processNext, 1000);
+        setTimeout(processNext, 1000); // 间隔 1 秒签下一个
       });
     }
 
     processNext();
   });
+}
+
+// 兼容获取 fmz200 模块存储的 Cookie
+function getWeiboCookie() {
+  var keys = [
+    "chavy_cookie_weibo",
+    "cookie_weibo",
+    "cookie_weibo_superbody",
+    "fmz200_cookie_weibo",
+    "wb_cookie",
+    "weibo_cookie"
+  ];
+
+  for (var i = 0; i < keys.length; i++) {
+    var val = getData(keys[i]);
+    if (val && typeof val === "string" && val.length > 20) {
+      return val;
+    }
+  }
+  return null;
 }
 
 function getSuperList(cookie, callback) {
