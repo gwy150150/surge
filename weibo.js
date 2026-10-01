@@ -1,23 +1,41 @@
 /**
- * 微博超话自动签到脚本 (适配 fmz200 cookies.module)
+ * 微博超话自动签到脚本 (全能 Key 自动匹配版)
  */
-
-var cookieKey = "chavy_cookie_weibo";
 
 CheckIn();
 
 function CheckIn() {
-  var cookie = getData(cookieKey);
+  // 自动遍历尝试所有可能存在的 Cookie Key
+  var cookieKeys = [
+    "cookie_weibo",
+    "cookie_weibo_superbody",
+    "wb_cookie",
+    "chavy_cookie_weibo",
+    "weibo_cookie"
+  ];
+
+  var cookie = "";
+  var usedKey = "";
+
+  for (var i = 0; i < cookieKeys.length; i++) {
+    var key = cookieKeys[i];
+    var val = getData(key);
+    if (val && val.length > 10) {
+      cookie = val;
+      usedKey = key;
+      break;
+    }
+  }
 
   if (!cookie) {
-    showNotification("签到失败", "未找到 Cookie，请先开启重写后打开微博APP获取");
+    showNotification("签到失败", "未找到 Cookie，请开启重写后打开微博APP获取");
     $done({});
     return;
   }
 
   getSuperList(cookie, function(list) {
     if (!list || list.length === 0) {
-      showNotification("签到结束", "未获取到关注的超话列表或 Cookie 已失效");
+      showNotification("签到结束", "未获取到超话列表(Key: " + usedKey + ") 或 Cookie 已过期");
       $done({});
       return;
     }
