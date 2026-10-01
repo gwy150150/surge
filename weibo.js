@@ -1,41 +1,46 @@
 /**
- * 微博超话自动签到脚本 (全能 Key 自动匹配版)
+ * 微博超话自动签到脚本 (fmz200 适配调试版)
  */
 
 CheckIn();
 
 function CheckIn() {
-  // 自动遍历尝试所有可能存在的 Cookie Key
-  var cookieKeys = [
+  // 包含 fmz200 及各类常见模块可能使用的所有 Cookie Key
+  var possibleKeys = [
+    "fmz200_cookie_weibo",
+    "fmz200_cookie_微博",
     "cookie_weibo",
     "cookie_weibo_superbody",
-    "wb_cookie",
     "chavy_cookie_weibo",
-    "weibo_cookie"
+    "wb_cookie",
+    "weibo_cookie",
+    "weibo_token",
+    "weiboCookie"
   ];
 
   var cookie = "";
-  var usedKey = "";
+  var hitKey = "";
 
-  for (var i = 0; i < cookieKeys.length; i++) {
-    var key = cookieKeys[i];
-    var val = getData(key);
+  for (var i = 0; i < possibleKeys.length; i++) {
+    var k = possibleKeys[i];
+    var val = getData(k);
     if (val && val.length > 10) {
       cookie = val;
-      usedKey = key;
+      hitKey = k;
       break;
     }
   }
 
   if (!cookie) {
-    showNotification("签到失败", "未找到 Cookie，请开启重写后打开微博APP获取");
+    // 如果全部匹配失败，尝试盲读 fmz200 的基础配置
+    showNotification("签到失败", "未匹配到对应的 Cookie Key，请查看应用日志调试");
     $done({});
     return;
   }
 
   getSuperList(cookie, function(list) {
     if (!list || list.length === 0) {
-      showNotification("签到结束", "未获取到超话列表(Key: " + usedKey + ") 或 Cookie 已过期");
+      showNotification("签到结束", "找到 Key(" + hitKey + ") 但列表为空或已过期");
       $done({});
       return;
     }
