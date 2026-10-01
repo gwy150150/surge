@@ -1,38 +1,37 @@
 /**
- * 微博超话自动签到脚本 - 专配 fmz200 数据结构版
+ * 微博超话自动签到脚本 - 精准匹配 fmz200_weibo_data
  */
 
 CheckIn();
 
 function CheckIn() {
-  // 1. 读取并解析 fmz200 存下的缓存数据
+  // 1. 读取并解析 fmz200 存下的数据
   var accountData = getFmzAccountData();
 
   if (!accountData) {
-    showNotification("签到失败 ❌", "未能解析到可用缓存，请确保已打开微博APP获取");
+    showNotification("签到失败 ❌", "未读取到缓存数据！请确保已刷新微博APP");
     $done({});
     return;
   }
 
-  // 2. 提取必要的请求参数
+  // 2. 提取凭证
   var headers = accountData.headers || {};
   var signinUrl = accountData.signin_url || "";
 
-  // 提取 gsid 和 uid
+  // 从 URL 提取 gsid
   var gsidMatch = signinUrl.match(/gsid=([^&]+)/);
   var gsid = gsidMatch ? gsidMatch[1] : "";
-  var uid = accountData.weibo_id || "";
 
   if (!gsid) {
-    showNotification("签到失败 ❌", "缓存数据中缺少 gsid 参数");
+    showNotification("签到失败 ❌", "数据中缺少 gsid 登录凭证");
     $done({});
     return;
   }
 
-  // 3. 请求关注的超话列表
+  // 3. 请求超话列表
   getSuperList(gsid, headers, function(list) {
     if (!list || list.length === 0) {
-      showNotification("签到结束 ⚠️", "未获取到超话列表，可能凭证已失效，请重新刷新微博");
+      showNotification("签到结束 ⚠️️", "未获取到关注的超话列表，请重新刷新微博超话页");
       $done({});
       return;
     }
@@ -60,7 +59,7 @@ function CheckIn() {
           failDetails.push(item.title + ": " + res.msg);
         }
         index++;
-        setTimeout(processNext, 1000); // 间隔1秒签下一个
+        setTimeout(processNext, 1000);
       });
     }
 
@@ -68,13 +67,13 @@ function CheckIn() {
   });
 }
 
-// 读取并匹配存储数据
+// 精准匹配 fmz200 保存的键名
 function getFmzAccountData() {
   var keys = [
+    "fmz200_weibo_data",
+    "weibo_data",
     "fmz200_cookie_weibo",
-    "cookie_weibo",
-    "chavy_cookie_weibo",
-    "wb_cookie"
+    "cookie_weibo"
   ];
 
   for (var i = 0; i < keys.length; i++) {
