@@ -1,23 +1,38 @@
 /**
- * 微博超话自动签到脚本 - 深度兼容 fmz200 cookies.module
+ * 微博超话自动签到脚本 - 专配 fmz200 数据结构版
  */
 
 CheckIn();
 
 function CheckIn() {
-  // 1. 获取 Cookie
-  var cookie = getWeiboCookie();
+  // 1. 读取并解析 fmz200 存下的缓存数据
+  var accountData = getFmzAccountData();
 
-  if (!cookie) {
-    showNotification("签到失败 ❌", "未能解析到可用 Cookie！请确认已进入微博超话页面刷新");
+  if (!accountData) {
+    showNotification("签到失败 ❌", "未能解析到可用缓存，请确保已打开微博APP获取");
     $done({});
     return;
   }
 
-  // 2. 请求超话列表
-  getSuperList(cookie, function(list) {
+  // 2. 提取必要的请求参数
+  var headers = accountData.headers || {};
+  var signinUrl = accountData.signin_url || "";
+
+  // 提取 gsid 和 uid
+  var gsidMatch = signinUrl.match(/gsid=([^&]+)/);
+  var gsid = gsidMatch ? gsidMatch[1] : "";
+  var uid = accountData.weibo_id || "";
+
+  if (!gsid) {
+    showNotification("签到失败 ❌", "缓存数据中缺少 gsid 参数");
+    $done({});
+    return;
+  }
+
+  // 3. 请求关注的超话列表
+  getSuperList(gsid, headers, function(list) {
     if (!list || list.length === 0) {
-      showNotification("签到结束 ⚠️", "获取超话列表为空，可能 Cookie 已过期，请打开微博重新刷新超话页");
+      showNotification("签到结束 ⚠️", "未获取到超话列表，可能凭证已失效，请重新刷新微博");
       $done({});
       return;
     }
@@ -27,7 +42,7 @@ function CheckIn() {
     var failDetails = [];
     var index = 0;
 
-    // 3. 逐个签到
+    // 4. 逐个签到
     function processNext() {
       if (index >= list.length) {
         var subTitle = "成功: " + success + " / 总数: " + total;
@@ -38,7 +53,7 @@ function CheckIn() {
       }
 
       var item = list[index];
-      doSign(item, cookie, function(res) {
+      doSign(item, gsid, headers, function(res) {
         if (res.result === 1) {
           success++;
         } else if (res.msg) {
@@ -53,58 +68,40 @@ function CheckIn() {
   });
 }
 
-// 自动适配并解析对象/字符串格式的 Cookie
-function getWeiboCookie() {
+// 读取并匹配存储数据
+function getFmzAccountData() {
   var keys = [
-    "chavy_cookie_weibo",
-    "cookie_weibo",
-    "cookie_weibo_superbody",
     "fmz200_cookie_weibo",
-    "wb_cookie",
-    "weibo_cookie",
-    "chavy_token_weibo"
+    "cookie_weibo",
+    "chavy_cookie_weibo",
+    "wb_cookie"
   ];
 
   for (var i = 0; i < keys.length; i++) {
     var rawVal = getData(keys[i]);
     if (!rawVal) continue;
 
-    // 如果存的是 JSON 字符串/对象，进行解析提取
-    var extracted = extractCookieString(rawVal);
-    if (extracted && extracted.length > 15) {
-      return extracted;
-    }
+    try {
+      var parsed = typeof rawVal === "string" ? JSON.parse(rawVal) : rawVal;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[0];
+      } else if (typeof parsed === "object" && parsed.signin_url) {
+        return parsed;
+      }
+    } catch (e) {}
   }
   return null;
 }
 
-function extractCookieString(val) {
-  if (typeof val === "object" && val !== null) {
-    if (val.headers && val.headers.Cookie) return val.headers.Cookie;
-    if (val.headers && val.headers.cookie) return val.headers.cookie;
-    if (val.cookie) return val.cookie;
-    if (val.Cookie) return val.Cookie;
-  }
-  
-  if (typeof val === "string") {
-    if (val.trim().startsWith("{")) {
-      try {
-        var obj = JSON.parse(val);
-        return extractCookieString(obj);
-      } catch (e) {}
-    }
-    return val;
-  }
-  return null;
-}
+function getSuperList(gsid, extraHeaders, callback) {
+  var reqHeaders = {
+    "User-Agent": extraHeaders["user-agent"] || "Weibo/100170 (iPhone; iOS 16.6.1; Scale/2.00)"
+  };
+  if (extraHeaders["authorization"]) reqHeaders["authorization"] = extraHeaders["authorization"];
 
-function getSuperList(cookie, callback) {
   var url = {
-    url: "https://api.weibo.cn/2/page/get_objects?containerid=100803_-_page_my_follow_super",
-    headers: {
-      "Cookie": cookie,
-      "User-Agent": "Weibo/7160 (iPhone; iOS 16.0; Scale/3.00)"
-    }
+    url: "https://api.weibo.cn/2/page/get_objects?containerid=100803_-_page_my_follow_super&gsid=" + gsid,
+    headers: reqHeaders
   };
 
   httpRequest(url, function(err, resp, data) {
@@ -138,13 +135,15 @@ function getSuperList(cookie, callback) {
   });
 }
 
-function doSign(item, cookie, callback) {
+function doSign(item, gsid, extraHeaders, callback) {
+  var reqHeaders = {
+    "User-Agent": extraHeaders["user-agent"] || "Weibo/100170 (iPhone; iOS 16.6.1; Scale/2.00)"
+  };
+  if (extraHeaders["authorization"]) reqHeaders["authorization"] = extraHeaders["authorization"];
+
   var url = {
-    url: "https://api.weibo.cn/2/page/button?request_url=http%3A%2F%2Fi.huati.weibo.com%2Fmobile%2Fsuper%2Factive_checkin%3Fpageid%3D" + item.id,
-    headers: {
-      "Cookie": cookie,
-      "User-Agent": "Weibo/7160 (iPhone; iOS 16.0; Scale/3.00)"
-    }
+    url: "https://api.weibo.cn/2/page/button?request_url=http%3A%2F%2Fi.huati.weibo.com%2Fmobile%2Fsuper%2Factive_checkin%3Fpageid%3D" + item.id + "&gsid=" + gsid,
+    headers: reqHeaders
   };
 
   httpRequest(url, function(err, resp, data) {
