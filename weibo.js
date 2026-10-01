@@ -1,15 +1,15 @@
 /**
- * 微博超话自动签到脚本 - 专配 fmz200 cookies.module
+ * 微博超话自动签到脚本 - 深度兼容 fmz200 cookies.module
  */
 
 CheckIn();
 
 function CheckIn() {
-  // 1. 获取本地存储的 Cookie
+  // 1. 获取 Cookie
   var cookie = getWeiboCookie();
 
   if (!cookie) {
-    showNotification("签到失败 ❌", "未找到 Cookie！请开启重写后打开微博APP -> 进入超话页面刷新");
+    showNotification("签到失败 ❌", "未能解析到可用 Cookie！请确认已进入微博超话页面刷新");
     $done({});
     return;
   }
@@ -17,7 +17,7 @@ function CheckIn() {
   // 2. 请求超话列表
   getSuperList(cookie, function(list) {
     if (!list || list.length === 0) {
-      showNotification("签到结束", "未获取到关注的超话列表，可能 Cookie 已失效，请重新刷新微博");
+      showNotification("签到结束 ⚠️", "获取超话列表为空，可能 Cookie 已过期，请打开微博重新刷新超话页");
       $done({});
       return;
     }
@@ -45,7 +45,7 @@ function CheckIn() {
           failDetails.push(item.title + ": " + res.msg);
         }
         index++;
-        setTimeout(processNext, 1000); // 间隔 1 秒签下一个
+        setTimeout(processNext, 1000); // 间隔1秒签下一个
       });
     }
 
@@ -53,7 +53,7 @@ function CheckIn() {
   });
 }
 
-// 兼容获取 fmz200 模块存储的 Cookie
+// 自动适配并解析对象/字符串格式的 Cookie
 function getWeiboCookie() {
   var keys = [
     "chavy_cookie_weibo",
@@ -61,14 +61,39 @@ function getWeiboCookie() {
     "cookie_weibo_superbody",
     "fmz200_cookie_weibo",
     "wb_cookie",
-    "weibo_cookie"
+    "weibo_cookie",
+    "chavy_token_weibo"
   ];
 
   for (var i = 0; i < keys.length; i++) {
-    var val = getData(keys[i]);
-    if (val && typeof val === "string" && val.length > 20) {
-      return val;
+    var rawVal = getData(keys[i]);
+    if (!rawVal) continue;
+
+    // 如果存的是 JSON 字符串/对象，进行解析提取
+    var extracted = extractCookieString(rawVal);
+    if (extracted && extracted.length > 15) {
+      return extracted;
     }
+  }
+  return null;
+}
+
+function extractCookieString(val) {
+  if (typeof val === "object" && val !== null) {
+    if (val.headers && val.headers.Cookie) return val.headers.Cookie;
+    if (val.headers && val.headers.cookie) return val.headers.cookie;
+    if (val.cookie) return val.cookie;
+    if (val.Cookie) return val.Cookie;
+  }
+  
+  if (typeof val === "string") {
+    if (val.trim().startsWith("{")) {
+      try {
+        var obj = JSON.parse(val);
+        return extractCookieString(obj);
+      } catch (e) {}
+    }
+    return val;
   }
   return null;
 }
